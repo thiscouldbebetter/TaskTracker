@@ -1,0 +1,932 @@
+<html>
+<body>
+
+<!-- ui -->
+<div id="divMain"></div>
+
+<!-- views -->
+
+<div id="divViews" style="display:none">
+
+	<div id="divPageTaskSearchView">
+
+		<label><b>Task Search</b></label>
+		<br />
+
+		<label>Text to Search for:</label>
+		<input id="inputTextToSearchFor"></input>
+		<button id="buttonSearch">Search</button>
+		<br />
+
+		<label>Tasks Found:</label>
+		<label id="labelTasksFoundCount">0</label>
+		<br />
+
+		<div>
+			<table width="100%">
+				<thead style="text-align:left">
+					<th>ID</th>
+					<th>Title</th>
+					<th>Time Created</th>
+					<th>Time Updated</th>
+					<th>Status</th>
+					<th>User Assigned</th>
+					<th>Actions</th>
+				</thead>
+
+				<tbody id="tbodyTasksFound">
+				</tbody>
+			</table>
+		</div>
+	</div>
+
+	<div id="divPageTaskDetailView">
+
+		<label><b>Task Detail</b></label>
+		<br />
+
+		<label>ID:</label>
+		<input id="inputTaskID" readonly="readonly"></input>
+		<br />
+
+		<label>Title:</label>
+		<input id="inputTaskTitle"></input>
+		<br />
+
+		<label>Time Created:</label>
+		<input id="inputTaskTimeCreated" readonly="readonly"></input>
+		<br />
+
+		<label>Time Updated:</label>
+		<input id="inputTaskTimeUpdated" readonly="readonly"></input>
+		<br />
+
+		<label>Status:</label>
+		<select id="selectTaskStatus"></select>
+		<br />
+
+		<label>User Assigned:</label>
+		<select id="selectTaskUserAssigned"></select>
+		<br />
+
+		<label>Comments:</label>
+		<br />
+		<div id="divTaskComments"></div>
+
+		<label>Comment to Add:</label>
+		<input id="inputTaskCommentToAddText"></input>
+		<button id="buttonTaskCommentAdd">Add Comment</button>
+		<br />
+
+		<button id="buttonTaskSave">Save</button>
+		<button id="buttonGoToTaskSearch">Back to Task Search</button>
+	</div>
+
+	<div id="divPageUserLoginView">
+
+		<label><b>User Login</b></label>
+		<br />
+
+		<label>Username:</label>
+		<input id="inputUserName"></input>
+		<br />
+
+		<label>Password:</label>
+		<input id="inputUserPassword" type="password"></input>
+		<br />
+
+		<button id="buttonUserLogIn">Log In</button>
+	</div>
+
+	<div id="divPageUserDetailView">
+
+		<label><b>User Detail</b></label>
+		<br />
+
+		<label>User:</label>
+		<input id="inputUserName" readonly="readonly"></input>
+		<br />
+
+		<label>Tasks Assigned:</label>
+		<br />
+
+		<div>
+			<table width="100%">
+				<thead style="text-align:left">
+					<th>ID</th>
+					<th>Title</th>
+					<th>Time Created</th>
+					<th>Time Updated</th>
+					<th>Status</th>
+					<th>Actions</th>
+				</thead>
+
+				<tbody id="tbodyTasksAssigned"></tbody>
+			</table>
+		</div>
+
+		<button id="buttonGoToTaskSearch">Search For Tasks</button>
+	</div>
+
+</div>
+
+<!-- code -->
+
+<script type="text/javascript">
+
+	// main
+	function main()
+	{
+		var users =
+		[
+			new User(1, "one", "one"),
+			new User(2, "two", "two"),
+			new User(3, "three", "three")
+		];
+
+		var now = new Date();
+
+		var statusCreatedID = TaskStatus.Instances.Created.id;
+
+		var tasks =
+		[
+			new Task
+			(
+				1, // id
+				"first", // title
+				now, // timeCreated
+				now, // timeUpdated
+				TaskStatus.Instances.Defined.id,
+				1, // userAssignedID
+				// comments
+				[
+					new TaskComment
+					(
+						now,
+						2, // userID
+						"This is the first bug."
+					),
+					new TaskComment
+					(
+						now,
+						3, // userID
+						"This is some expert analysis."
+					)
+				]
+			),
+
+			new Task
+			(
+				2, // id
+				"second", // title
+				now, // timeCreated
+				now, // timeUpdated
+				statusCreatedID,
+				null, // userAssignedID
+				// comments
+				[
+					new TaskComment
+					(
+						now,
+						2, // userID
+						"This is the second bug."
+					)
+				]
+			),
+
+			new Task
+			(
+				3, // id
+				"third", // title
+				now, // timeCreated
+				now, // timeUpdated
+				statusCreatedID,
+				null, // userAssignedID
+				// comments
+				[
+					new TaskComment
+					(
+						now,
+						3, // userID
+						"This is the third bug."
+					)
+				]
+			)
+		];
+
+		var database = new Database(users, tasks);
+		var userSession = new UserSession();
+		Globals.Instance.initialize ( database, userSession );
+	}
+
+	// extensions
+	function ArrayExtensions()
+	{
+		// Extension class.
+	}
+	{
+		Array.prototype.addLookups = function(keyName)
+		{
+			for (var i = 0; i < this.length; i++)
+			{
+				var element = this[i];
+				var key = element[keyName];
+				if (isNaN(key) == false)
+				{
+					key = "_" + key;
+				}
+				this[key] = element;
+			}
+			return this;
+		}
+
+		// cloneable
+		Array.prototype.clone = function()
+		{
+			var returnValues = [];
+			for (var i = 0; i < this.length; i++)
+			{
+				var element = this[i];
+				var elementCloned = element.clone();
+				returnValues.push(elementCloned);
+			}
+
+			return returnValues;
+		}
+
+		Array.prototype.overwriteWith = function(other)
+		{
+			if (this.length > other.length)
+			{
+				this.length = other.length;
+			}
+
+			for (var i = 0; i < this.length; i++)
+			{
+				var element = this[i];
+				var elementToOverwriteWith = other[i];
+				element.overwriteWith(elementToOverwriteWith);
+			}
+
+			var numberOfElementsToClone = other.length - this.length;
+			for (var i = 0; i < numberOfElementsToClone; i++)
+			{
+				var elementToClone = other[this.length + i];
+				var elementCloned = elementToClone.clone();
+				this.push(elementCloned);
+			}
+
+			return this;
+		}
+	}
+
+	function StringExtensions()
+	{
+		// Extension class.
+	}
+	{
+		String.prototype.contains = function(substring)
+		{
+			return this.indexOf(substring) >= 0;
+		}
+	}
+
+	// classes
+	function Database(users, tasks)
+	{
+		this.users = users.addLookups("id").addLookups("name");
+		this.tasks = tasks.addLookups("id");
+	}
+	{
+		Database.prototype.taskGetByID = function(id)
+		{
+			var returnValue = this.tasks["_" + id];
+			if (returnValue != null)
+			{
+				returnValue = returnValue.clone();
+			}
+			return returnValue;
+		}
+
+		Database.prototype.taskSave = function(task)
+		{
+			if (task.id == null)
+			{
+				task.id = this.tasks.length;
+				this.tasks.push(task);
+			}
+			else
+			{
+				var taskExisting = this.tasks["_" + task.id];
+				taskExisting.overwriteWith(task);
+			}
+			this.tasks.addLookups("id");
+		}
+
+		Database.prototype.tasksGetAll = function()
+		{
+			return this.tasks.clone();
+		}
+
+		Database.prototype.tasksGetByUserAssignedID = function(userAssignedID)
+		{
+			var returnValues = [];
+			for (var i = 0; i < this.tasks.length; i++)
+			{
+				var task = this.tasks[i];
+				if (task.userAssignedID == userAssignedID)
+				{
+					returnValues.push(task);
+				}
+			}
+			return returnValues.clone();
+		}
+
+		Database.prototype.userGetByID = function(id)
+		{
+			var returnValue = this.users["_" + id];
+			if (returnValue != null)
+			{
+				returnValue = returnValue.clone();
+			}
+			return returnValue;
+		}
+
+		Database.prototype.userGetByName = function(name)
+		{
+			var returnValue = this.users[name];
+			if (returnValue != null)
+			{
+				returnValue = returnValue.clone();
+			}
+			return returnValue;
+		}
+
+		Database.prototype.usersGetAll = function()
+		{
+			return this.users.clone();
+		}
+
+		Database.prototype.userSave = function(user)
+		{
+			if (user.id == null)
+			{
+				user.id = this.users.length;
+				this.users.push(user);
+			}
+			else
+			{
+				var userExisting = this.users["_" + user.id];
+				userExisting.overwriteWith(user);
+			}
+
+			this.users.addLookups("id").addLookups("name");
+		}
+	}
+
+	function Globals()
+	{
+		// Do nothing.
+	}
+	{
+		Globals.Instance = new Globals();
+
+		Globals.prototype.initialize = function(database, userSession)
+		{
+			this.database = database;
+			this.userSession = userSession;
+			this.userSession.initialize();
+		}
+	}
+
+	function PageTaskDetail(task)
+	{
+		this.task = task;
+		this.taskCommentToAddText = "";
+	}
+	{
+		PageTaskDetail.prototype.taskCommentAdd = function()
+		{
+			if (this.taskCommentToAddText != "")
+			{
+				var commentToAdd = new TaskComment
+				(
+					new Date(),
+					Globals.Instance.userSession.user.id,
+					this.taskCommentToAddText
+				);
+
+				this.task.comments.push(commentToAdd);
+				this.taskCommentToAddText = "";
+				this.domElementUpdate();
+			}
+		}
+
+		PageTaskDetail.prototype.taskSave = function() 
+		{
+			this.task.timeUpdated = new Date();
+			Globals.Instance.database.taskSave(this.task);
+		}
+
+		// dom
+		PageTaskDetail.prototype.domElementUpdate = function()
+		{
+			var d = document;
+			var domElement = this._domElement;
+			var task = this.task;
+			var database = Globals.Instance.database;
+			if (domElement == null)
+			{
+				domElement = d.createElement("div");
+				domElement.innerHTML = d.getElementById("divPageTaskDetailView").innerHTML;
+				var divMain = d.getElementById("divMain");
+				divMain.appendChild(domElement);
+
+				var selectTaskStatus = d.getElementById("selectTaskStatus");
+				var statusesAll = TaskStatus.Instances._All;
+
+				for (var i = 0; i < statusesAll.length; i++)
+				{
+					var status = statusesAll[i];
+					var statusAsDomElement = status.domElementUpdate();
+					selectTaskStatus.appendChild(statusAsDomElement);
+				}
+
+				selectTaskStatus.onchange = function(event)
+				{
+					this.task.statusID = event.target.value;
+				}.bind(this);
+				var selectTaskUserAssigned =
+					d.getElementById("selectTaskUserAssigned");
+
+				var usersAll = database.usersGetAll();
+
+				for (var i = 0; i < usersAll.length; i++)
+				{
+					var user = usersAll[i];
+					var userAsDomElement = user.domElementUpdate();
+					selectTaskUserAssigned.appendChild(userAsDomElement);
+				}
+
+				selectTaskUserAssigned.onchange = function(event)
+				{
+					this.task.userAssignedID = event.target.value;
+				}.bind(this);
+
+				var page = this;
+
+				d.getElementById("inputTaskCommentToAddText").onchange = function(event)
+				{
+					page.taskCommentToAddText = event.target.value;
+				};
+
+				d.getElementById("buttonTaskCommentAdd").onclick =
+					this.taskCommentAdd.bind(this);
+
+				d.getElementById("buttonTaskSave").onclick =
+					this.taskSave.bind(this);
+
+				d.getElementById("buttonGoToTaskSearch").onclick = function()
+				{
+					Globals.Instance.userSession.pageCurrentSet ( new PageTaskSearch() );
+				}
+
+				this._domElement = domElement;
+			}
+
+			d.getElementById("inputTaskID").value = task.id;
+			d.getElementById("inputTaskTitle").value = task.title;
+			d.getElementById("inputTaskTimeCreated").value = task.timeCreated.toISOString();
+			d.getElementById("inputTaskTimeUpdated").value = task.timeUpdated.toISOString();
+			d.getElementById("selectTaskStatus").value = task.statusID;
+			d.getElementById("selectTaskUserAssigned").value = task.userAssignedID;
+			var divTaskComments = d.getElementById("divTaskComments");
+			divTaskComments.innerHTML = "";
+
+			for (var i = 0; i < task.comments.length; i++)
+			{
+				var comment = task.comments[i];
+				var commentAsDomElement = comment.domElementUpdate();
+				divTaskComments.appendChild(commentAsDomElement);
+			}
+
+			d.getElementById("inputTaskCommentToAddText").value = "";
+
+			return domElement;
+		}
+	}
+
+	function PageTaskSearch()
+	{
+		this.textToSearchFor = "";
+		this.tasksFound = [];
+	}
+	{
+		PageTaskSearch.prototype.search = function()
+		{
+			this.tasksFound.length = 0;
+			var tasksAll = Globals.Instance.database.tasksGetAll();
+			if (this.textToSearchFor == "")
+			{
+				this.tasksFound = tasksAll.slice();
+				// copy
+			}
+			else
+			{
+				for (var i = 0; i < tasksAll.length; i++)
+				{
+					var task = tasksAll[i];
+					var doesTaskContainText = task.doesContainText(this.textToSearchFor);
+					if (doesTaskContainText)
+					{
+						this.tasksFound.push(task);
+					}
+				}
+			}
+
+			this.domElementUpdate();
+		}
+
+		// dom
+
+		PageTaskSearch.prototype.domElementUpdate = function()
+		{
+			var d = document;
+			var domElement = this._domElement;
+			if (domElement == null)
+			{
+				domElement = d.createElement("div");
+				domElement.innerHTML = d.getElementById("divPageTaskSearchView").innerHTML;
+				var divMain = d.getElementById("divMain");
+				divMain.appendChild(domElement);
+				var inputTextToSearchFor = d.getElementById("inputTextToSearchFor");
+				inputTextToSearchFor.onchange = function(event)
+				{
+					this.textToSearchFor = event.target.value;
+				}.bind(this);
+				var buttonSearch = d.getElementById("buttonSearch");
+				buttonSearch.onclick = this.search.bind(this);
+				this._domElement = domElement;
+			}
+			var labelTasksFoundCount = d.getElementById("labelTasksFoundCount");
+			labelTasksFoundCount.innerHTML = this.tasksFound.length;
+			var tbodyTasksFound = d.getElementById("tbodyTasksFound");
+			tbodyTasksFound.innerHTML = "";
+			for (var i = 0; i < this.tasksFound.length; i++)
+			{
+				var taskFound = this.tasksFound[i];
+				var taskFoundAsDomElement = taskFound.domElementUpdate(true);
+				tbodyTasksFound.appendChild(taskFoundAsDomElement);
+			}
+
+			return domElement;
+		}
+	}
+
+	function PageUserDetail(user)
+	{
+		this.user = user;
+	}
+	{
+		// dom
+		PageUserDetail.prototype.domElementUpdate = function()
+		{
+			var d = document;
+			var domElement = this._domElement;
+			if (domElement == null)
+			{
+				domElement = d.createElement("div");
+				domElement.innerHTML = d.getElementById("divPageUserDetailView").innerHTML;
+				d.getElementById("divMain").appendChild(domElement);
+				d.getElementById("inputUserName").value = this.user.name;
+				d.getElementById("buttonGoToTaskSearch").onclick = function()
+				{
+					Globals.Instance.userSession.pageCurrentSet
+					(
+						new PageTaskSearch()
+					);
+				}
+				this._domElement = domElement;
+			}
+
+			var tasksAssigned = this.user.tasksAssigned();
+			var tbodyTasksAssigned = d.getElementById("tbodyTasksAssigned");
+			tbodyTasksAssigned.innerHTML = "";
+
+			for (var i = 0; i < tasksAssigned.length; i++)
+			{
+				var task = tasksAssigned[i];
+				var taskAsDomElement = task.domElementUpdate(false);
+				tbodyTasksAssigned.appendChild(taskAsDomElement);
+			}
+
+			return domElement;
+		}
+	}
+
+	function PageUserLogin()
+	{
+		this.userName = "";
+		this.password = "";
+	}
+	{
+		// dom
+
+		PageUserLogin.prototype.domElementUpdate = function()
+		{
+			var d = document;
+			var domElement = this._domElement;
+			if (domElement == null)
+			{
+				domElement = d.createElement("div");
+				domElement.innerHTML = d.getElementById("divPageUserLoginView").innerHTML;
+				var divMain = d.getElementById("divMain");
+				divMain.appendChild(domElement);
+
+				d.getElementById("inputUserName").onchange = function(event)
+				{
+					this.userName = event.target.value;
+				}.bind(this);
+
+				d.getElementById("inputUserPassword").onchange = function(event)
+				{
+					this.password = event.target.value;
+				}.bind(this);
+
+				d.getElementById("buttonUserLogIn").onclick = function(event)
+				{
+					var userFound = Globals.Instance.database.userGetByName(this.userName);
+					if (userFound == null || this.password != userFound.password)
+					{
+						alert("Username or password not valid.");
+					}
+					else
+					{
+						var session = Globals.Instance.userSession;
+						session.user = userFound;
+						session.pageCurrentSet(new PageUserDetail(userFound));
+					}
+				}.bind(this);
+
+				this._domElement = domElement;
+			}
+
+			return domElement;
+		}
+	}
+
+	function Task
+	(
+		id, title, timeCreated, timeUpdated, statusID,
+		userAssignedID, comments, parentID
+	)
+	{
+		this.id = id;
+		this.title = title;
+		this.timeCreated = timeCreated;
+		this.timeUpdated = timeUpdated;
+		this.statusID = statusID;
+		this.userAssignedID = userAssignedID;
+		this.comments = comments;
+		this.parentID = parentID;
+	}
+	{
+		Task.prototype.doesContainText = function(textToFind)
+		{
+			var returnValue = this.title.contains(textToFind);
+			if (returnValue == false)
+			{
+				for (var i = 0; i < this.comments.length; i++)
+				{
+					var comment = this.comments[i];
+					returnValue = comment.doesContainText(textToFind);
+					if (returnValue == true)
+					{
+						break;
+					}
+				}
+			}
+			return returnValue;
+		}
+
+		Task.prototype.status = function()
+		{
+			return TaskStatus.Instances._All["_" + this.statusID];
+		}
+
+		Task.prototype.userAssigned = function()
+		{
+			var database = Globals.Instance.database;
+			var userAssigned = database.userGetByID(this.userAssignedID);
+			return userAssigned;
+		}
+
+		// cloneable
+		Task.prototype.clone = function()
+		{
+			return new Task
+			(
+				this.id, this.title, this.timeCreated,
+				this.timeUpdated, this.statusID,
+				this.userAssignedID, this.comments.clone(), this.parentID
+			);
+		}
+
+		Task.prototype.overwriteWith = function(other)
+		{
+			this.id = other.id;
+			this.title = other.title;
+			this.timeCreated = other.timeCreated;
+			this.timeUpdated = other.timeUpdated;
+			this.statusID = other.statusID;
+			this.userAssignedID = other.userAssignedID;
+			this.comments.overwriteWith(other.comments);
+			this.parentID = other.parentID;
+			return this;
+		}
+
+		// dom
+		Task.prototype.domElementUpdate = function(includeUserAssigned)
+		{
+			var d = document;
+			var domElement = d.createElement("tr");
+			var userAssigned = this.userAssigned();
+			var fieldsToInclude =
+			[
+				this.id, this.title, this.timeCreated.toISOString(),
+				this.timeUpdated.toISOString(), this.status().name
+			];
+
+			if (includeUserAssigned)
+			{
+				fieldsToInclude.push
+				(
+					userAssigned == null ? "[none]" : userAssigned.name
+				);
+			}
+
+			for (var i = 0; i < fieldsToInclude.length; i++)
+			{
+				var field = fieldsToInclude[i];
+				var fieldAsTd = d.createElement("td");
+				fieldAsTd.innerHTML = field;
+				domElement.appendChild(fieldAsTd);
+			}
+
+			var linkTaskView = d.createElement("a");
+			linkTaskView.innerHTML = "View";
+			linkTaskView.href = "#";
+			var taskID = this.id;
+			linkTaskView.onclick = function()
+			{
+				var session = Globals.Instance.userSession;
+				var task = Globals.Instance.database.taskGetByID(taskID);
+				session.pageCurrentSet(new PageTaskDetail(task) );
+			}
+
+			var tdTaskView = d.createElement("td");
+			tdTaskView.appendChild(linkTaskView);
+			domElement.appendChild(tdTaskView);
+			return domElement;
+		}
+	}
+
+	function TaskComment(timeCreated, userID, text)
+	{
+		this.timeCreated = timeCreated;
+		this.userID = userID;
+		this.text = text;
+	}
+	{
+		TaskComment.prototype.doesContainText = function(textToFind)
+		{
+			return this.text.contains(textToFind);
+		}
+
+		TaskComment.prototype.user = function()
+		{
+			return Globals.Instance.database.userGetByID(this.userID);
+		}
+
+		// cloneable
+		TaskComment.prototype.clone = function()
+		{
+			return new TaskComment(this.timeCreated, this.userID, this.text);
+		}
+
+		TaskComment.prototype.overwriteWith = function(other)
+		{
+			this.timeCreated = other.timeCreated;
+			this.userID = other.userID;
+			this.text = other.text;
+			return this;
+		}
+
+		// dom
+		TaskComment.prototype.domElementUpdate = function()
+		{
+			var returnValue = document.createElement("div");
+			returnValue.innerHTML =
+				this.timeCreated.toISOString() + " - "
+				+ this.user().name + "<br />"
+				+ this.text + "<br />";
+
+			return returnValue;
+		}
+	}
+
+	function TaskStatus(id, name)
+	{
+		this.id = id; this.name = name;
+	}
+	{
+		TaskStatus.Instances = new TaskStatus_Instances();
+
+		function TaskStatus_Instances()
+		{
+			this.Created = new TaskStatus(1, "Created");
+			this.Defined = new TaskStatus(2, "Defined");
+			this.Implemented = new TaskStatus(3, "Implemented");
+			this.Verified = new TaskStatus(4, "Verified");
+			this.Delivered = new TaskStatus(5, "Delivered");
+			this.Blocked = new TaskStatus(6, "Blocked");
+			this.Cancelled = new TaskStatus(7, "Cancelled");
+
+			this._All =
+			[
+				this.Created, this.Defined, this.Implemented,
+				this.Verified, this.Delivered, this.Blocked,
+				this.Cancelled
+			].addLookups("id");
+		}
+
+		// dom
+		TaskStatus.prototype.domElementUpdate = function()
+		{
+			var returnValue = document.createElement("option");
+			returnValue.innerHTML = this.name;
+			returnValue.value = this.id;
+			return returnValue;
+		}
+	}
+
+	function User(id, name, password)
+	{
+		this.id = id; this.name = name; this.password = password;
+	}
+	{
+		User.prototype.tasksAssigned = function()
+		{
+			return Globals.Instance.database.tasksGetByUserAssignedID(this.id);
+		}
+
+		// cloneable
+		User.prototype.clone = function()
+		{
+			return new User(this.id, this.name, this.password);
+		}
+
+		User.prototype.overwriteWith = function(other)
+		{
+			this.id = other.id;
+			this.name = other.name;
+			this.password = other.password;
+			return this;
+		}
+
+		// dom
+		User.prototype.domElementUpdate = function()
+		{
+			var returnValue = document.createElement("option");
+			returnValue.innerHTML = this.name;
+			returnValue.value = this.id;
+			return returnValue;
+		}
+	}
+
+	function UserSession(user)
+	{
+		this.user = user;
+	}
+	{
+		UserSession.prototype.initialize = function()
+		{
+			this.pageCurrentSet(new PageUserLogin() );
+		}
+
+		UserSession.prototype.pageCurrentSet = function(value)
+		{
+			this.pageCurrent = value;
+			var divMain = document.getElementById("divMain");
+			divMain.innerHTML = "";
+			var pageCurrentAsDomElement = this.pageCurrent.domElementUpdate();
+			divMain.appendChild(pageCurrentAsDomElement);
+		}
+	}
+
+	// run
+	main();
+
+</script>
+</body>
+</html>
